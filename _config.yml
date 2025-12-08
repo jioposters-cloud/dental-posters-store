@@ -1,0 +1,38 @@
+# Site settings
+title: Dental Posters & 3D Prints Store
+description: Quality dental posters, patient education materials, books, and 3D printed items
+baseurl: "/dental-posters-store"
+url: "https://jioposters-cloud.github.io"
+
+# Snipcart settings
+snipcart_api_key: "YOUR_SNIPCART_PUBLIC_API_KEY_HERE"
+
+# Build settings
+markdown: kramdown
+theme: minima
+plugins:
+  - jekyll-feed
+
+# Collections for products
+collections:
+  products:
+    output: true
+    permalink: /products/:path/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "products"
+    values:
+      layout: "product"
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
