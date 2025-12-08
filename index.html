@@ -1,0 +1,69 @@
+---
+layout: default
+title: Status Ring - Dental Posters & 3D Prints Store
+---
+
+<div class="hero">
+  <h1>Welcome to Status Ring Store</h1>
+  <p>Quality dental posters, patient education materials, books, and 3D printed items</p>
+</div>
+
+<div class="category-filter">
+  <h2>Shop by Category</h2>
+  <div class="categories">
+    <button class="category-btn" data-category="all">All Products</button>
+    <button class="category-btn" data-category="Dental Artwork Posters">Dental Artwork Posters</button>
+    <button class="category-btn" data-category="Dental Patient Education Posters">Patient Education</button>
+    <button class="category-btn" data-category="Skin Posters">Skin Care</button>
+    <button class="category-btn" data-category="Books">Books</button>
+    <button class="category-btn" data-category="3D Printed Stuff">3D Prints</button>
+    <button class="category-btn" data-category="Digital Downloads">Digital Downloads</button>
+  </div>
+</div>
+
+<div class="products-grid" id="products-container">
+  {% for product in site.data.products %}
+  <div class="product-card" data-category="{{ product.category }}">
+    <img src="{{ product.main_image }}" alt="{{ product.name }}" class="product-image">
+    <h3>{{ product.name }}</h3>
+    <p class="category-tag">{{ product.category }}</p>
+    <p class="description">{{ product.description }}</p>
+    <p class="price">₹{{ product.price }}</p>
+    <button 
+      class="snipcart-add-item buy-btn"
+      data-item-id="{{ product.id }}"
+      data-item-price="{{ product.price }}"
+      data-item-url="/dental-posters-store/"
+      data-item-name="{{ product.name }}"
+      data-item-description="{{ product.description }}"
+      data-item-image="{{ product.main_image }}"
+      data-item-max-quantity="{{ product.stock }}">
+      Add to Cart
+    </button>
+    <a href="https://wa.me/919714293282?text=I%20want%20to%20order%20{{ product.name | url_encode }}" class="whatsapp-btn" target="_blank">WhatsApp Order</a>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+// Category filtering
+const categoryBtns = document.querySelectorAll('.category-btn');
+const productCards = document.querySelectorAll('.product-card');
+
+categoryBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const category = btn.dataset.category;
+    
+    categoryBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    productCards.forEach(card => {
+      if (category === 'all' || card.dataset.category === category) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
