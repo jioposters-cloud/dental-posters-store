@@ -21,49 +21,110 @@ title: Status Ring - Dental Posters & 3D Prints Store
   </div>
 </div>
 
-<div class="products-grid" id="products-container">
-  {% for product in site.data.products %}
-  <div class="product-card" data-category="{{ product.category }}">
-    <img src="{{ product.main_image }}" alt="{{ product.name }}" class="product-image">
-    <h3>{{ product.name }}</h3>
-    <p class="category-tag">{{ product.category }}</p>
-    <p class="description">{{ product.description }}</p>
-    <p class="price">₹{{ product.price }}</p>
-    <button 
-      class="snipcart-add-item buy-btn"
-      data-item-id="{{ product.id }}"
-      data-item-price="{{ product.price }}"
-      data-item-url="/dental-posters-store/"
-      data-item-name="{{ product.name }}"
-      data-item-description="{{ product.description }}"
-      data-item-image="{{ product.main_image }}"
-      data-item-max-quantity="{{ product.stock }}">
-      Add to Cart
-    </button>
-    <a href="https://wa.me/919714293282?text=I%20want%20to%20order%20{{ product.name | url_encode }}" class="whatsapp-btn" target="_blank">WhatsApp Order</a>
-  </div>
-  {% endfor %}
+<div id="products-container" class="products-grid"></div>
+
+<div class="pagination">
+  <button id="prev-btn" class="pagination-btn">← Previous</button>
+  <span id="page-info">Loading...</span>
+  <button id="next-btn" class="pagination-btn">Next →</button>
 </div>
 
 <script>
-// Category filtering
-const categoryBtns = document.querySelectorAll('.category-btn');
-const productCards = document.querySelectorAll('.product-card');
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRnYbVG299QQv6YoaSs1UZl7KfUo6CZxxcfUJJnMjaL_kFH4O2L52iwPM02TObQxgwIdb-FkRLI2et1/pub?gid=2040758698&single=true&output=csv';
+const ITEMS_PER_PAGE = 18;
 
-categoryBtns.forEach(btn => {
+let allProducts = [], filteredProducts = [], currentPage = 1, selectedCategory = 'all';
+
+function parseCSV(csv) {
+  const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  const products = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const values = lines[i].split(',').map(v => v.trim());
+    const product = {};
+    headers.forEach((h, j) => { product[h] = values[j] || ''; });
+    products.push(product);
+  }
+  return products;
+}
+
+async function loadProducts() {
+  try {
+    const response = await fetch(CSV_URL);
+    const csvText = await response.text();
+    allProducts = parseCSV(csvText);
+    filterProducts();
+    renderProducts();
+  } catch (e) {
+    document.getElementById('products-container').innerHTML = '<p>Error loading products. Check CSV URL.</p>';
+  }
+}
+
+function filterProducts() {
+  filteredProducts = selectedCategory === 'all' ? allProducts : allProducts.filter(p => p.Category === selectedCategory);
+  currentPage = 1;
+}
+
+function renderProducts() {
+  const container = document.getElementById('products-container');
+  container.innerHTML = '';
+  const start = (currentPage - 1) * ITEMS_PER_PAGE;
+  const end = start + ITEMS_PER_PAGE;
+  filteredProducts.slice(start, end).forEach(product => {
+    container.appendChild(createProductCard(product));
+  });
+  updatePagination();
+}
+
+function createProductCard(p) {
+  const card = document.createElement('div');
+  card.className = 'product-card';
+  const img = p['Main image'] || 'https://via.placeholder.com/250x300?text=No+Image';
+  const features = [p['<<key feature1>>'], p['<<key feature2>>'], p['<<key feature3>>']].filter(f => f);
+  card.innerHTML = `
+    <img src="${img}" alt="${p['Product name']}" class="product-image" onerror="this.src='https://via.placeholder.com/250x300'">
+    <h3>${p['Product name']}</h3>
+    <p class="product-category">${p.Category}</p>
+    <p class="product-desc">${p['<<Discreption>>']?.substring(0, 100) || 'No description'}...</p>
+    ${p['<<Product Code>>'] ? `<p><small>Code: ${p['<<Product Code>>']}</small></p>` : ''}
+    ${p['<<Size>>'] ? `<p><small>Size: ${p['<<Size>>']}</small></p>` : ''}
+    ${p['<<Color>>'] ? `<p><small>Color: ${p['<<Color>>']}</small></p>` : ''}
+    ${features.length > 0 ? `<p><small><strong>Features:</strong> ${features.join(', ')}</small></p>` : ''}
+    <p class="product-price"><strong>${p['<<Price>>'] || 'Contact'}</strong></p>
+    <button class="add-to-cart-btn" onclick="alert('Product: ${p['Product name']}\\nPrice: ${p['<<Price>>']}\\n\\nAdd to cart ready once API key added')">Add to Cart</button>
+    ${p['<<Amazon Link>>'] ? `<a href="${p['<<Amazon Link>>']}" target="_blank" class="amazon-btn">Amazon Link</a>` : ''}
+    <a href="#" class="whatsapp-btn" onclick="window.open('https://wa.me/919714293282?text=I want ${encodeURIComponent(p['Product name'])}', '_blank'); return false;">WhatsApp Order</a>
+  `;
+  return card;
+}
+
+function updatePagination() {
+  const pages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  document.getElementById('page-info').textContent = `Page ${currentPage} of ${pages} | ${filteredProducts.length} items`;
+  document.getElementById('prev-btn').disabled = currentPage === 1;
+  document.getElementById('next-btn').disabled = currentPage === pages;
+}
+
+document.getElementById('prev-btn').addEventListener('click', () => {
+  if (currentPage > 1) { currentPage--; renderProducts(); window.scrollTo(0,0); }
+});
+
+document.getElementById('next-btn').addEventListener('click', () => {
+  if (currentPage < Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)) { currentPage++; renderProducts(); window.scrollTo(0,0); }
+});
+
+document.querySelectorAll('.category-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    const category = btn.dataset.category;
-    
-    categoryBtns.forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    
-    productCards.forEach(card => {
-      if (category === 'all' || card.dataset.category === category) {
-        card.style.display = 'block';
-      } else {
-        card.style.display = 'none';
-      }
-    });
+    selectedCategory = btn.getAttribute('data-category');
+    filterProducts();
+    renderProducts();
   });
 });
+
+document.querySelector('.category-btn').classList.add('active');
+window.addEventListener('load', loadProducts);
 </script>
