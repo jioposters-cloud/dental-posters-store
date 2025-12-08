@@ -5,7 +5,7 @@ baseurl: "/dental-posters-store"
 url: "https://jioposters-cloud.github.io"
 
 # Snipcart settings
-snipcart_api_key: "YOUR_SNIPCART_PUBLIC_API_KEY_HERE"
+snipcart_api_key: "MWQ0YWM2OTAtNGJhYy00YjQ5LWI5MTctMWMyYThNTM1YzkwNjM"
 
 # Build settings
 markdown: kramdown
