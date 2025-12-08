@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title }} | {{ site.title }}</title>
+  <meta name="description" content="{{ site.description }}">
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <!-- Snipcart CSS -->
+  <link rel="preconnect" href="https://app.snipcart.com">
+  <link rel="preconnect" href="https://cdn.snipcart.com">
+  <link rel="stylesheet" href="https://cdn.snipcart.com/themes/v3.3.1/default/snipcart.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <h1><a href="{{ site.baseurl }}/">Status Ring Store</a></h1>
+        <p class="tagline">Designs for Office & Home</p>
+      </div>
+      <nav>
+        <a href="{{ site.baseurl }}/">Home</a>
+        <a href="https://wa.me/919714293282" target="_blank">WhatsApp</a>
+        <a href="https://instagram.com/statusring.in" target="_blank">Instagram</a>
+        <button class="snipcart-checkout cart-btn">
+          <span>Cart (<span class="snipcart-items-count">0</span>)</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {{ content }}
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 Status Ring | <a href="mailto:thestatusring@gmail.com">thestatusring@gmail.com</a></p>
+      <p>WhatsApp: +91 9714293282</p>
+      <div class="social-links">
+        <a href="https://instagram.com/statusring.in" target="_blank">Instagram</a>
+        <a href="https://www.facebook.com/people/Status-Ring/100091664551945/" target="_blank">Facebook</a>
+        <a href="https://t.me/+MdMMOnmWX_9lM2I1" target="_blank">Telegram</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Snipcart -->
+  <script async src="https://cdn.snipcart.com/themes/v3.3.1/default/snipcart.js"></script>
+  <div hidden id="snipcart" data-api-key="{{ site.snipcart_api_key }}"></div>
+</body>
+</html>
