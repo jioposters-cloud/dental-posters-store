@@ -2,7 +2,6 @@
 layout: default
 title: Status Ring - Dental Posters & 3D Prints Store
 ---
-
 <div class="hero">
   <h1>Welcome to Status Ring Store</h1>
   <p>Quality dental posters, patient education materials, books, and 3D printed items</p>
@@ -25,8 +24,8 @@ title: Status Ring - Dental Posters & 3D Prints Store
 
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRnYbVG299QQv6YoaSs1UZl7KfUo6CZxxcfUJJnMjaL_kFH4O2L52iwPM02TObQxgwIdb-FkRLI2et1/pub?gid=703936022&single=true&output=csv';
+const SNIPCART_API_KEY = 'MWQ0YWM2OTAtNGJhYy00YjQ1LWI5MTctMWMyYThNTM1YzkwNjM';
 const ITEMS_PER_PAGE = 18;
-
 let allProducts = [], filteredProducts = [], currentPage = 1;
 
 function parseCSV(csv) {
@@ -37,12 +36,13 @@ function parseCSV(csv) {
     if (!lines[i].trim()) continue;
     const values = lines[i].split(',').map(v => v.trim());
     const product = {
-      image: values[0],        // A - Product Image
-      name: values[1],         // B - Product Name
-      price: values[5],        // F - Price
-      description: values[6],  // G - Description
-      size: values[10],        // K - Size
-      category: values[16]     // Q - Category
+      image: values[0],     // A - Product Image
+      name: values[1],      // B - Product Name
+      price: values[5],     // F - Price
+      description: values[6], // G - Description
+      size: values[10],     // K - Size
+      category: values[16], // Q - Category
+      id: `product-${i}`    // Unique ID for Snipcart
     };
     products.push(product);
   }
@@ -57,8 +57,8 @@ async function loadProducts() {
     filteredProducts = allProducts;
     renderProducts();
   } catch (e) {
-    console.error('Error:', e);
-    document.getElementById('products-container').innerHTML = '<p style="text-align:center;padding:2rem">Error loading products.</p>';
+    console.error('Error loading products:', e);
+    document.getElementById('products-container').innerHTML = '<p style="text-align:center;padding:2rem">Error loading products. Please refresh the page.</p>';
   }
 }
 
@@ -71,12 +71,17 @@ function renderProducts() {
     container.appendChild(createProductCard(product));
   });
   updatePagination();
+  // Reload Snipcart to recognize new items
+  if (window.Snipcart) {
+    window.Snipcart.api.cart.items.refresh();
+  }
 }
 
 function createProductCard(p) {
   const card = document.createElement('div');
   card.className = 'product-card';
   const img = p.image || 'https://via.placeholder.com/250x300?text=No+Image';
+  
   card.innerHTML = `
     <img src="${img}" alt="${p.name}" class="product-image" onerror="this.src='https://via.placeholder.com/250x300?text=No+Image'">
     <h3>${p.name || 'Product'}</h3>
@@ -84,8 +89,17 @@ function createProductCard(p) {
     <p class="product-desc">${p.description ? p.description.substring(0, 100) : 'No description'}...</p>
     ${p.size ? `<p class="product-size"><strong>Size:</strong> ${p.size}</p>` : ''}
     <p class="product-price"><strong>₹${p.price || 'Contact'}</strong></p>
-    <button class="add-to-cart-btn" onclick="alert('Product: ${p.name}\\nPrice: ₹${p.price}\\n\\nAdd to cart ready once Snipcart API key added')">Add to Cart</button>
-    <a href="#" class="whatsapp-btn" onclick="window.open('https://wa.me/919714293282?text=I want ${encodeURIComponent(p.name)}', '_blank'); return false;">WhatsApp Order</a>
+    <button class="snipcart-add-item add-to-cart-btn"
+            data-item-id="${p.id}"
+            data-item-name="${p.name}"
+            data-item-price="${p.price}"
+            data-item-url="https://jioposters-cloud.github.io/dental-posters-store/"
+            data-item-image="${img}">
+      Add to Cart
+    </button>
+    <a href="#" class="whatsapp-btn" onclick="window.open('https://wa.me/919714293282?text=I want ${encodeURIComponent(p.name)}', '_blank'); return false;">
+      WhatsApp Order
+    </a>
   `;
   return card;
 }
