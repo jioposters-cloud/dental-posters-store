@@ -12,12 +12,6 @@ title: Status Ring - Dental Posters & 3D Prints Store
   <h2>Shop by Category</h2>
   <div class="categories">
     <button class="category-btn" data-category="all">All Products</button>
-    <button class="category-btn" data-category="Dental Artwork Posters">Dental Artwork Posters</button>
-    <button class="category-btn" data-category="Dental Patient Education Posters">Patient Education</button>
-    <button class="category-btn" data-category="Skin Posters">Skin Care</button>
-    <button class="category-btn" data-category="Books">Books</button>
-    <button class="category-btn" data-category="3D Printed Stuff">3D Prints</button>
-    <button class="category-btn" data-category="Digital Downloads">Digital Downloads</button>
   </div>
 </div>
 
@@ -33,18 +27,23 @@ title: Status Ring - Dental Posters & 3D Prints Store
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRnYbVG299QQv6YoaSs1UZl7KfUo6CZxxcfUJJnMjaL_kFH4O2L52iwPM02TObQxgwIdb-FkRLI2et1/pub?gid=2040758698&single=true&output=csv';
 const ITEMS_PER_PAGE = 18;
 
-let allProducts = [], filteredProducts = [], currentPage = 1, selectedCategory = 'all';
+let allProducts = [], filteredProducts = [], currentPage = 1;
 
 function parseCSV(csv) {
   const lines = csv.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
   const products = [];
   
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     const values = lines[i].split(',').map(v => v.trim());
-    const product = {};
-    headers.forEach((h, j) => { product[h] = values[j] || ''; });
+    const product = {
+      image: values[0],        // A - Product Image
+      name: values[1],         // B - Product Name
+      price: values[5],        // F - Price
+      description: values[6],  // G - Description
+      size: values[10],        // K - Size
+      category: values[16]     // Q - Category
+    };
     products.push(product);
   }
   return products;
@@ -55,16 +54,12 @@ async function loadProducts() {
     const response = await fetch(CSV_URL);
     const csvText = await response.text();
     allProducts = parseCSV(csvText);
-    filterProducts();
+    filteredProducts = allProducts;
     renderProducts();
   } catch (e) {
-    document.getElementById('products-container').innerHTML = '<p>Error loading products. Check CSV URL.</p>';
+    console.error('Error:', e);
+    document.getElementById('products-container').innerHTML = '<p style="text-align:center;padding:2rem">Error loading products.</p>';
   }
-}
-
-function filterProducts() {
-  filteredProducts = selectedCategory === 'all' ? allProducts : allProducts.filter(p => p.Category === selectedCategory);
-  currentPage = 1;
 }
 
 function renderProducts() {
@@ -81,21 +76,16 @@ function renderProducts() {
 function createProductCard(p) {
   const card = document.createElement('div');
   card.className = 'product-card';
-  const img = p['Main image'] || 'https://via.placeholder.com/250x300?text=No+Image';
-  const features = [p['<<key feature1>>'], p['<<key feature2>>'], p['<<key feature3>>']].filter(f => f);
+  const img = p.image || 'https://via.placeholder.com/250x300?text=No+Image';
   card.innerHTML = `
-    <img src="${img}" alt="${p['Product name']}" class="product-image" onerror="this.src='https://via.placeholder.com/250x300'">
-    <h3>${p['Product name']}</h3>
-    <p class="product-category">${p.Category}</p>
-    <p class="product-desc">${p['<<Discreption>>']?.substring(0, 100) || 'No description'}...</p>
-    ${p['<<Product Code>>'] ? `<p><small>Code: ${p['<<Product Code>>']}</small></p>` : ''}
-    ${p['<<Size>>'] ? `<p><small>Size: ${p['<<Size>>']}</small></p>` : ''}
-    ${p['<<Color>>'] ? `<p><small>Color: ${p['<<Color>>']}</small></p>` : ''}
-    ${features.length > 0 ? `<p><small><strong>Features:</strong> ${features.join(', ')}</small></p>` : ''}
-    <p class="product-price"><strong>${p['<<Price>>'] || 'Contact'}</strong></p>
-    <button class="add-to-cart-btn" onclick="alert('Product: ${p['Product name']}\\nPrice: ${p['<<Price>>']}\\n\\nAdd to cart ready once API key added')">Add to Cart</button>
-    ${p['<<Amazon Link>>'] ? `<a href="${p['<<Amazon Link>>']}" target="_blank" class="amazon-btn">Amazon Link</a>` : ''}
-    <a href="#" class="whatsapp-btn" onclick="window.open('https://wa.me/919714293282?text=I want ${encodeURIComponent(p['Product name'])}', '_blank'); return false;">WhatsApp Order</a>
+    <img src="${img}" alt="${p.name}" class="product-image" onerror="this.src='https://via.placeholder.com/250x300?text=No+Image'">
+    <h3>${p.name || 'Product'}</h3>
+    <p class="product-category">${p.category || 'General'}</p>
+    <p class="product-desc">${p.description ? p.description.substring(0, 100) : 'No description'}...</p>
+    ${p.size ? `<p class="product-size"><strong>Size:</strong> ${p.size}</p>` : ''}
+    <p class="product-price"><strong>₹${p.price || 'Contact'}</strong></p>
+    <button class="add-to-cart-btn" onclick="alert('Product: ${p.name}\\nPrice: ₹${p.price}\\n\\nAdd to cart ready once Snipcart API key added')">Add to Cart</button>
+    <a href="#" class="whatsapp-btn" onclick="window.open('https://wa.me/919714293282?text=I want ${encodeURIComponent(p.name)}', '_blank'); return false;">WhatsApp Order</a>
   `;
   return card;
 }
@@ -115,16 +105,5 @@ document.getElementById('next-btn').addEventListener('click', () => {
   if (currentPage < Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)) { currentPage++; renderProducts(); window.scrollTo(0,0); }
 });
 
-document.querySelectorAll('.category-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedCategory = btn.getAttribute('data-category');
-    filterProducts();
-    renderProducts();
-  });
-});
-
-document.querySelector('.category-btn').classList.add('active');
 window.addEventListener('load', loadProducts);
 </script>
