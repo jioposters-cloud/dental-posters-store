@@ -2,122 +2,241 @@
 layout: default
 title: Status Ring - Dental Posters & 3D Prints Store
 ---
+
 <div class="hero">
   <h1>Welcome to Status Ring Store</h1>
   <p>Quality dental posters, patient education materials, books, and 3D printed items</p>
 </div>
 
+<div class="toolbar">
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search products..." class="search-input">
+    <button class="search-btn">Search</button>
+  </div>
+  
+  <div class="filter-section">
+    <label>Sort by:</label>
+    <select id="sortSelect" class="sort-select">
+      <option value="featured">Featured</option>
+      <option value="price-low">Price: Low to High</option>
+      <option value="price-high">Price: High to Low</option>
+      <option value="newest">Newest</option>
+    </select>
+  </div>
+</div>
+
 <div class="category-filter">
   <h2>Shop by Category</h2>
-  <div class="categories">
-    <button class="category-btn" data-category="all">All Products</button>
+  <div class="categories" id="categoriesContainer">
+    <button class="category-btn active" data-category="all">All Products</button>
   </div>
 </div>
 
 <div id="products-container" class="products-grid"></div>
 
 <div class="pagination">
-  <button id="prev-btn" class="pagination-btn">← Previous</button>
-  <span id="page-info">Loading...</span>
-  <button id="next-btn" class="pagination-btn">Next →</button>
+  <button id="prev-btn" class="pagination-btn">Previous</button>
+  <span id="page-info">Page 1 of 1</span>
+  <button id="next-btn" class="pagination-btn">Next</button>
 </div>
 
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRnYbVG299QQv6YoaSs1UZl7KfUo6CZxxcfUJJnMjaL_kFH4O2L52iwPM02TObQxgwIdb-FkRLI2et1/pub?gid=703936022&single=true&output=csv';
-const SNIPCART_API_KEY = 'MWQ0YWM2OTAtNGJhYy00YjQ1LWI5MTctMWMyYThNTM1YzkwNjM';
-const ITEMS_PER_PAGE = 18;
-let allProducts = [], filteredProducts = [], currentPage = 1;
+const ITEMS_PER_PAGE = 12;
+let allProducts = [];
+let filteredProducts = [];
+let currentPage = 1;
+let currentCategory = 'all';
+let currentSort = 'featured';
+let searchQuery = '';
+
+// Data source - using Jekyll's _data folder
+const DATA_URL = '/dental-posters-store/_data/products.csv';
+
+// Parse CSV from Jekyll data
+async function loadProducts() {
+  try {
+    // For Jekyll, we can access site.data.products directly
+    // Since this is a client-side app, we'll parse the CSV file
+    const response = await fetch('https://raw.githubusercontent.com/jioposters-cloud/dental-posters-store/main/_data/products.csv');
+    const csv = await response.text();
+    allProducts = parseCSV(csv);
+    
+    // Extract unique categories
+    const categories = [...new Set(allProducts.map(p => p.category))];
+    populateCategories(['all', ...categories]);
+    
+    // Initial load
+    applyFiltersAndSort();
+    renderProducts();
+  } catch (error) {
+    console.error('Error loading products:', error);
+    document.getElementById('products-container').innerHTML = '<div class="error-msg">Error loading products. Please refresh the page.</div>';
+  }
+}
 
 function parseCSV(csv) {
   const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
   const products = [];
   
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
+    
     const values = lines[i].split(',').map(v => v.trim());
-    const product = {
-      image: values[0],     // A - Product Image
-      name: values[1],      // B - Product Name
-      price: values[5],     // F - Price
-      description: values[6], // G - Description
-      size: values[10],     // K - Size
-      category: values[16], // Q - Category
-      id: `product-${i}`    // Unique ID for Snipcart
-    };
+    const product = {};
+    
+    headers.forEach((header, index) => {
+      product[header] = values[index] || '';
+    });
+    
     products.push(product);
   }
+  
   return products;
 }
 
-async function loadProducts() {
-  try {
-    const response = await fetch(CSV_URL);
-    const csvText = await response.text();
-    allProducts = parseCSV(csvText);
-    filteredProducts = allProducts;
-    renderProducts();
-  } catch (e) {
-    console.error('Error loading products:', e);
-    document.getElementById('products-container').innerHTML = '<p style="text-align:center;padding:2rem">Error loading products. Please refresh the page.</p>';
+function populateCategories(categories) {
+  const container = document.getElementById('categoriesContainer');
+  container.innerHTML = '';
+  
+  categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'category-btn' + (cat === 'all' ? ' active' : '');
+    btn.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    btn.dataset.category = cat;
+    
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = cat;
+      currentPage = 1;
+      applyFiltersAndSort();
+      renderProducts();
+    });
+    
+    container.appendChild(btn);
+  });
+}
+
+function applyFiltersAndSort() {
+  // Filter by category
+  let filtered = currentCategory === 'all' 
+    ? allProducts 
+    : allProducts.filter(p => p.category === currentCategory);
+  
+  // Filter by search
+  if (searchQuery) {
+    filtered = filtered.filter(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   }
+  
+  // Sort
+  switch(currentSort) {
+    case 'price-low':
+      filtered.sort((a, b) => parseInt(a.price) - parseInt(b.price));
+      break;
+    case 'price-high':
+      filtered.sort((a, b) => parseInt(b.price) - parseInt(a.price));
+      break;
+    case 'newest':
+      filtered.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+      break;
+  }
+  
+  filteredProducts = filtered;
 }
 
 function renderProducts() {
-  const container = document.getElementById('products-container');
-  container.innerHTML = '';
   const start = (currentPage - 1) * ITEMS_PER_PAGE;
   const end = start + ITEMS_PER_PAGE;
-  filteredProducts.slice(start, end).forEach(product => {
-    container.appendChild(createProductCard(product));
-  });
+  const pageProducts = filteredProducts.slice(start, end);
+  
+  const container = document.getElementById('products-container');
+  
+  if (pageProducts.length === 0) {
+    container.innerHTML = '<div class="no-products">No products found. Try adjusting your filters.</div>';
+    updatePagination();
+    return;
+  }
+  
+  container.innerHTML = pageProducts.map(product => createProductCard(product)).join('');
   updatePagination();
-  // Reload Snipcart to recognize new items
+  
+  // Refresh Snipcart
   if (window.Snipcart) {
     window.Snipcart.api.cart.items.refresh();
   }
 }
 
-function createProductCard(p) {
-  const card = document.createElement('div');
-  card.className = 'product-card';
-  const img = p.image || 'https://via.placeholder.com/250x300?text=No+Image';
+function createProductCard(product) {
+  const image = product.main_image || 'https://via.placeholder.com/300?text=No+Image';
+  const description = (product.description || '').substring(0, 100);
   
-  card.innerHTML = `
-    <img src="${img}" alt="${p.name}" class="product-image" onerror="this.src='https://via.placeholder.com/250x300?text=No+Image'">
-    <h3>${p.name || 'Product'}</h3>
-    <p class="product-category">${p.category || 'General'}</p>
-    <p class="product-desc">${p.description ? p.description.substring(0, 100) : 'No description'}...</p>
-    ${p.size ? `<p class="product-size"><strong>Size:</strong> ${p.size}</p>` : ''}
-    <p class="product-price"><strong>₹${p.price || 'Contact'}</strong></p>
-    <button class="snipcart-add-item add-to-cart-btn"
-            data-item-id="${p.id}"
-            data-item-name="${p.name}"
-            data-item-price="${p.price}"
-            data-item-url="https://jioposters-cloud.github.io/dental-posters-store/"
-            data-item-image="${img}">
-      Add to Cart
-    </button>
-    <a href="#" class="whatsapp-btn" onclick="window.open('https://wa.me/919714293282?text=I want ${encodeURIComponent(p.name)}', '_blank'); return false;">
-      WhatsApp Order
-    </a>
+  return `
+    <div class="product-card">
+      <div class="product-image-wrapper">
+        <img src="${image}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300?text=No+Image'">
+        <span class="product-category-badge">${product.category}</span>
+      </div>
+      <div class="product-info">
+        <h3 class="product-name">${product.name}</h3>
+        <p class="product-category">Category: ${product.category}</p>
+        <p class="product-description">${description}...</p>
+        <div class="product-footer">
+          <span class="product-price"><strong>₹${product.price}</strong></span>
+          <button class="snipcart-add-item add-to-cart-btn"
+            data-item-id="product-${product.id}"
+            data-item-name="${product.name}"
+            data-item-price="${product.price}"
+            data-item-image="${image}"
+            data-item-url="https://jioposters-cloud.github.io/dental-posters-store/">Add to Cart</button>
+        </div>
+      </div>
+    </div>
   `;
-  return card;
 }
 
 function updatePagination() {
-  const pages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  document.getElementById('page-info').textContent = `Page ${currentPage} of ${pages} | ${filteredProducts.length} items`;
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
   document.getElementById('prev-btn').disabled = currentPage === 1;
-  document.getElementById('next-btn').disabled = currentPage === pages;
+  document.getElementById('next-btn').disabled = currentPage === totalPages;
 }
 
+// Event Listeners
+document.getElementById('searchInput').addEventListener('keyup', (e) => {
+  searchQuery = e.target.value;
+  currentPage = 1;
+  applyFiltersAndSort();
+  renderProducts();
+});
+
+document.getElementById('sortSelect').addEventListener('change', (e) => {
+  currentSort = e.target.value;
+  currentPage = 1;
+  applyFiltersAndSort();
+  renderProducts();
+});
+
 document.getElementById('prev-btn').addEventListener('click', () => {
-  if (currentPage > 1) { currentPage--; renderProducts(); window.scrollTo(0,0); }
+  if (currentPage > 1) {
+    currentPage--;
+    renderProducts();
+    window.scrollTo(0, 0);
+  }
 });
 
 document.getElementById('next-btn').addEventListener('click', () => {
-  if (currentPage < Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)) { currentPage++; renderProducts(); window.scrollTo(0,0); }
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderProducts();
+    window.scrollTo(0, 0);
+  }
 });
 
+// Load products on page load
 window.addEventListener('load', loadProducts);
 </script>
